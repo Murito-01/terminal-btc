@@ -1,0 +1,155 @@
+/* === Dashboard Layout === */
+
+.dashboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding-top: var(--space-5);
+  padding-bottom: var(--space-8);
+}
+
+/* Toast notification */
+.new-signal-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: linear-gradient(135deg, var(--color-bg-card), rgba(247,147,26,0.05));
+  border: 1px solid rgba(247,147,26,0.3);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-5);
+  font-size: 13px;
+  color: var(--text-primary);
+  animation: slideIn 0.3s ease;
+  box-shadow: 0 0 16px rgba(247,147,26,0.1);
+}
+
+.toast-icon {
+  font-size: 18px;
+  animation: pulse 2s infinite;
+}
+
+/* Controls bar */
+.dashboard-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dashboard-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.section-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-btc);
+  box-shadow: 0 0 8px var(--color-btc);
+  animation: pulse 3s infinite;
+}
+
+.dashboard-view-toggle {
+  display: flex;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  gap: 4px;
+}
+
+.view-btn {
+  padding: 6px 14px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.view-btn:hover {
+  color: var(--text-primary);
+  background: var(--color-bg-elevated);
+}
+
+.view-btn--active {
+  background: var(--gradient-btc);
+  color: white;
+  box-shadow: 0 2px 8px rgba(247,147,26,0.3);
+}
+
+/* Main grid */
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: var(--space-5);
+  align-items: stretch;
+  /* Chart area fills full available viewport height minus header, controls, padding */
+  min-height: calc(100vh - 64px - 48px - 40px - 32px);
+}
+
+.dashboard-chart-area {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-side-panels {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  /* Side panels align to top, chart grows independently */
+  align-self: start;
+  position: sticky;
+  top: calc(64px + var(--space-5));
+}
+
+/* History section */
+.dashboard-history {
+  width: 100%;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr 290px;
+  }
+
+  .dashboard-side-panels {
+    position: static;
+  }
+}
+
+@media (max-width: 900px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .dashboard-side-panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    position: static;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-side-panels {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-view-toggle {
+    display: none;
+  }
+}
