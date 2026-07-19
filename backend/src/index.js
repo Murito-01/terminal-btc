@@ -12,6 +12,9 @@ const signalRoutes = require('./routes/signals');
 const webhookRoutes = require('./routes/webhook');
 const settingsRoutes = require('./routes/settings');
 
+// Signal Engine
+const { startSignalEngine } = require('./services/signalEngine');
+
 const app = express();
 const server = http.createServer(app);
 
@@ -104,4 +107,7 @@ server.listen(PORT, () => {
   console.log(`🔗 Webhook endpoint: POST http://localhost:${PORT}/api/webhook`);
   console.log(`💊 Health check: GET http://localhost:${PORT}/api/health`);
   console.log('');
+
+  // Mulai Signal Engine otomatis (polling Binance setiap 1 menit)
+  startSignalEngine(io, 60 * 1000);
 });

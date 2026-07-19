@@ -45,6 +45,10 @@ function initSchema() {
       stoch_k REAL,
       stoch_d REAL,
       order_block_zone TEXT,
+      entry_price REAL,
+      tp1 REAL,
+      tp2 REAL,
+      sl REAL,
       outcome TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -66,6 +70,17 @@ function initSchema() {
 
     INSERT OR IGNORE INTO settings (id, telegram_enabled) VALUES (1, 0);
   `);
+
+  // Migrasi kolom baru pada database yang sudah ada (aman jika sudah ada)
+  const migrations = [
+    'ALTER TABLE signals ADD COLUMN entry_price REAL',
+    'ALTER TABLE signals ADD COLUMN tp1 REAL',
+    'ALTER TABLE signals ADD COLUMN tp2 REAL',
+    'ALTER TABLE signals ADD COLUMN sl REAL',
+  ];
+  for (const sql of migrations) {
+    try { db.exec(sql); } catch (_) { /* kolom sudah ada, abaikan */ }
+  }
 }
 
 module.exports = { getDb };

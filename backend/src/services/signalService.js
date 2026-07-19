@@ -23,28 +23,33 @@ function calculateSuccessRate(timeframe, positionType) {
  */
 function saveSignal(data) {
   const db = getDb();
-  const { timeframe, position, ema9, ema13, stoch_k, stoch_d, order_block } = data;
+  const { timeframe, position, ema9, ema13, stoch_k, stoch_d, order_block, entry_price, tp1, tp2, sl } = data;
 
   const successRate = calculateSuccessRate(timeframe, position);
 
   const stmt = db.prepare(`
-    INSERT INTO signals (timeframe, position_type, success_rate, ema9, ema13, stoch_k, stoch_d, order_block_zone)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO signals (timeframe, position_type, success_rate, ema9, ema13, stoch_k, stoch_d, order_block_zone, entry_price, tp1, tp2, sl)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const result = stmt.run(
     timeframe,
     position,
     successRate,
-    ema9 !== undefined ? ema9 : null,
-    ema13 !== undefined ? ema13 : null,
-    stoch_k !== undefined ? stoch_k : null,
-    stoch_d !== undefined ? stoch_d : null,
-    order_block || null
+    ema9        !== undefined ? ema9        : null,
+    ema13       !== undefined ? ema13       : null,
+    stoch_k     !== undefined ? stoch_k     : null,
+    stoch_d     !== undefined ? stoch_d     : null,
+    order_block || null,
+    entry_price !== undefined ? entry_price : null,
+    tp1         !== undefined ? tp1         : null,
+    tp2         !== undefined ? tp2         : null,
+    sl          !== undefined ? sl          : null,
   );
 
   return db.prepare('SELECT * FROM signals WHERE id = ?').get(result.lastInsertRowid);
 }
+
 
 /**
  * Ambil semua sinyal dengan pagination
