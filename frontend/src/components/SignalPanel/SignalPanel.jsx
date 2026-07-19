@@ -14,10 +14,10 @@ const POSITION_CONFIG = {
     desc: 'Rekomendasi posisi JUAL (Short)',
   },
   WAIT: {
-    label: 'WAIT',
+    label: 'WAIT & SEE',
     emoji: '⏸',
     colorClass: 'signal--wait',
-    desc: 'Wait and See — Belum ada sinyal kuat',
+    desc: 'Belum ada sinyal kuat — Tunggu konfirmasi',
   },
 };
 
@@ -58,24 +58,128 @@ function SuccessRateBar({ rate }) {
   );
 }
 
-export default function SignalPanel({ signal, latestByTimeframe }) {
-  if (!signal) {
-    return (
-      <div className="signal-panel signal-panel--empty" id="signal-panel">
-        <div className="signal-empty">
-          <div className="signal-empty-icon">📡</div>
-          <h3 className="signal-empty-title">Menunggu Sinyal</h3>
-          <p className="signal-empty-desc">
-            Belum ada sinyal dari TradingView. Pastikan webhook sudah dikonfigurasi.
-          </p>
+/**
+ * Komponen level TP/SL
+ */
+function TradeLevels({ signal, isWait = false }) {
+  const { entry_price, tp1, tp2, sl, position_type } = signal;
+  if (!tp1 || !sl) return null;
+
+  const formatPrice = (p) =>
+    p ? `$${Number(p).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
+
+  const isLong = (position_type || signal.position) !== 'SHORT';
+
+  return (
+    <div className={`trade-levels ${isWait ? 'trade-levels--preview' : ''}`}>
+      {isWait && (
+        <div className="trade-levels-badge">📊 Level Referensi (jika sinyal muncul)</div>
+      )}
+
+      <div className="level-grid">
+        <div className="level-item level-tp1">
+          <span className="level-icon">🎯</span>
+          <div className="level-body">
+            <span className="level-label">Take Profit 1</span>
+            <span className="level-value">{formatPrice(tp1)}</span>
+            {entry_price && (
+              <span className="level-rr">
+                RR 1:1.3 · {isLong ? '+' : '-'}{Math.abs(((tp1 - entry_price) / entry_price) * 100).toFixed(2)}%
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="level-item level-tp2">
+          <span className="level-icon">🎯</span>
+          <div className="level-body">
+            <span className="level-label">Take Profit 2</span>
+            <span className="level-value">{formatPrice(tp2)}</span>
+            {entry_price && (
+              <span className="level-rr">
+                RR 1:2 · {isLong ? '+' : '-'}{Math.abs(((tp2 - entry_price) / entry_price) * 100).toFixed(2)}%
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="level-item level-sl">
+          <span className="level-icon">🛑</span>
+          <div className="level-body">
+            <span className="level-label">Stop Loss</span>
+            <span className="level-value">{formatPrice(sl)}</span>
+            {entry_price && (
+              <span className="level-rr">
+                {isLong ? '-' : '+'}{Math.abs(((sl - entry_price) / entry_price) * 100).toFixed(2)}%
+              </span>
+            )}
+          </div>
         </div>
       </div>
-    );
+
+      {entry_price && (
+        <div className="level-entry">
+          <span className="level-entry-label">Entry Price</span>
+          <span className="level-entry-value">{formatPrice(entry_price)}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Panel "Menunggu Analisa" — ditampilkan sebelum Signal Engine mengirim data pertama
+ */
+function EmptyState() {
+  return (
+    <div className="signal-panel signal-panel--empty" id="signal-panel">
+      <div className="signal-empty">
+        <div className="signal-empty-icon">📡</div>
+        <h3 className="signal-empty-title">Menghubungkan ke Engine...</h3>
+        <p className="signal-empty-desc">
+          Signal Engine sedang mengambil data dari Binance. Harap tunggu sebentar.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Panel utama sinyal
+ * @param {object} signal - sinyal dari database (LONG/SHORT tersimpan) atau live state
+ * @param {object} liveState - state terkini semua timeframe dari Socket.IO
+ * @param {object} latestByTimeframe - sinyal terakhir per timeframe dari API
+ */
+export default function SignalPanel({ signal, liveState, latestByTimeframe }) {
+  // Tentukan timeframe yang aktif (gunakan 1H sebagai default)
+  const activeTimeframe = signal?.timeframe || '1H';
+
+  // Gunakan live state dari Socket jika ada, atau fallback ke signal dari DB
+  const liveData = liveState?.[activeTimeframe] || liveState?.['1H'];
+
+  // Jika belum ada live state DAN tidak ada signal dari DB, tampilkan loading
+  if (!liveData && !signal) {
+    return <EmptyState />;
   }
 
-  const config = POSITION_CONFIG[signal.position_type] || POSITION_CONFIG.WAIT;
+  // Tentukan data yang akan ditampilkan
+  // Prioritas: sinyal terbaru dari DB (LONG/SHORT) → live state dari engine
+  const displayData = signal || liveData;
+  const position    = displayData?.position_type || liveData?.position || 'WAIT';
+  const config      = POSITION_CONFIG[position] || POSITION_CONFIG.WAIT;
+  const isWait      = position === 'WAIT';
+
+  // Siapkan data level TP/SL dari live state atau dari sinyal DB
+  const levelData = {
+    entry_price:   liveData?.entry_price   ?? signal?.entry_price,
+    tp1:           liveData?.tp1           ?? signal?.tp1,
+    tp2:           liveData?.tp2           ?? signal?.tp2,
+    sl:            liveData?.sl            ?? signal?.sl,
+    position_type: position,
+  };
 
   const formatTime = (dateStr) => {
+    if (!dateStr) return '—';
     return new Date(dateStr).toLocaleString('id-ID', {
       timeZone: 'Asia/Jakarta',
       day: '2-digit',
@@ -84,6 +188,8 @@ export default function SignalPanel({ signal, latestByTimeframe }) {
       minute: '2-digit',
     });
   };
+
+  const signalTime = signal?.created_at || liveData?.updated_at;
 
   return (
     <div className={`signal-panel ${config.colorClass}`} id="signal-panel">
@@ -103,19 +209,50 @@ export default function SignalPanel({ signal, latestByTimeframe }) {
       <div className="signal-meta">
         <div className="signal-meta-item">
           <span className="signal-meta-label">Timeframe</span>
-          <span className="signal-meta-value mono">{signal.timeframe}</span>
+          <span className="signal-meta-value mono">
+            {liveData?.timeframe || signal?.timeframe || '—'}
+          </span>
         </div>
         <div className="signal-meta-item">
-          <span className="signal-meta-label">Waktu Sinyal</span>
-          <span className="signal-meta-value mono">{formatTime(signal.created_at)}</span>
+          <span className="signal-meta-label">{isWait ? 'Update' : 'Waktu Sinyal'}</span>
+          <span className="signal-meta-value mono">{formatTime(signalTime)}</span>
         </div>
+        {liveData?.currentPrice && (
+          <div className="signal-meta-item">
+            <span className="signal-meta-label">Harga BTC</span>
+            <span className="signal-meta-value mono signal-price">
+              ${Number(liveData.currentPrice).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Success Rate */}
-      <SuccessRateBar rate={signal.success_rate} />
+      {/* TP/SL Levels */}
+      <TradeLevels signal={levelData} isWait={isWait} />
+
+      {/* Success Rate — hanya untuk sinyal LONG/SHORT */}
+      {!isWait && <SuccessRateBar rate={signal?.success_rate} />}
 
       {/* Timeframe summary pills */}
-      {latestByTimeframe && (
+      {liveState && (
+        <div className="signal-tf-summary">
+          <span className="signal-tf-label">Status per Timeframe:</span>
+          <div className="signal-tf-pills">
+            {Object.entries(liveState).map(([tf, tfData]) => {
+              const tfConfig = POSITION_CONFIG[tfData?.position] || POSITION_CONFIG.WAIT;
+              return (
+                <div key={tf} className={`tf-pill tf-pill--${(tfData?.position || 'wait').toLowerCase()}`}>
+                  <span className="tf-pill-tf">{tf}</span>
+                  <span className="tf-pill-val">{tfConfig.emoji} {tfData?.position || 'WAIT'}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Fallback pills dari API jika liveState belum ada */}
+      {!liveState && latestByTimeframe && (
         <div className="signal-tf-summary">
           <span className="signal-tf-label">Sinyal per Timeframe:</span>
           <div className="signal-tf-pills">
