@@ -93,9 +93,7 @@
   display: grid;
   grid-template-columns: 1fr 320px;
   gap: var(--space-5);
-  align-items: stretch;
-  /* Chart area fills full available viewport height minus header, controls, padding */
-  min-height: calc(100vh - 64px - 48px - 40px - 32px);
+  align-items: start;
 }
 
 .dashboard-chart-area {
