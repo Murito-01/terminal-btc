@@ -3,10 +3,9 @@ import './Chart.css';
 
 const TIMEFRAMES = [
   { label: '15m', tv: '15' },
-  { label: '30m', tv: '30' },
-  { label: '1H', tv: '60' },
-  { label: '4H', tv: '240' },
-  { label: '1D', tv: 'D' },
+  { label: '1H',  tv: '60' },
+  { label: '4H',  tv: '240' },
+  { label: '1D',  tv: 'D' },
 ];
 
 export default function ChartPanel({ multiView }) {
@@ -55,7 +54,7 @@ export default function ChartPanel({ multiView }) {
 
     containerRef.current.appendChild(script);
     widgetRef.current = script;
-  }, [activeTimeframe]);
+  }, [activeTimeframe, multiView]);
 
   if (multiView) {
     return (
@@ -64,7 +63,7 @@ export default function ChartPanel({ multiView }) {
           <span className="chart-multi-title">Multi-Timeframe View</span>
         </div>
         <div className="chart-multi-grid">
-          {TIMEFRAMES.slice(0, 4).map((tf) => (
+          {TIMEFRAMES.map((tf) => (
             <div key={tf.label} className="chart-multi-item">
               <div className="chart-multi-label">
                 <span className="tf-badge">BTC/USDT</span>
@@ -125,7 +124,7 @@ function MultiChart({ interval }) {
       width: '100%',
       height: '100%',
       locale: 'id',
-      dateRange: interval === '15' || interval === '30' ? '1D' : interval === '60' ? '1M' : '12M',
+      dateRange: interval === '15' ? '1D' : interval === '60' ? '1M' : interval === '240' ? '6M' : '12M',
       colorTheme: 'dark',
       trendLineColor: 'rgba(247, 147, 26, 0.8)',
       underLineColor: 'rgba(247, 147, 26, 0.1)',

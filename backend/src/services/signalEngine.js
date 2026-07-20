@@ -3,7 +3,7 @@ const { analyzeCandles, calcTPSL } = require('./indicatorService');
 const { saveSignal } = require('./signalService');
 
 // Timeframe yang dianalisa secara otomatis
-const TIMEFRAMES = ['15m', '30m', '1H', '4H'];
+const TIMEFRAMES = ['15m', '1H', '4H', '1D'];
 
 // Simpan posisi terakhir per timeframe agar tidak duplikat sinyal yang sama
 const lastSignalPosition = {};
