@@ -87,9 +87,12 @@ export default function DashboardPage() {
 
         {/* Main layout */}
         <div className="dashboard-layout">
-          {/* Left: Chart */}
+          {/* Left: Chart + History stacked */}
           <div className="dashboard-chart-area">
             <ChartPanel multiView={multiView} />
+            <div className="dashboard-history">
+              <SignalHistory newSignalTrigger={signalTrigger} />
+            </div>
           </div>
 
           {/* Right: Panels */}
@@ -100,13 +103,7 @@ export default function DashboardPage() {
               latestByTimeframe={latestByTimeframe}
             />
             <IndicatorPanel signal={currentSignal} liveState={liveState} />
-
           </div>
-        </div>
-
-        {/* Signal History */}
-        <div className="dashboard-history">
-          <SignalHistory newSignalTrigger={signalTrigger} />
         </div>
       </main>
 

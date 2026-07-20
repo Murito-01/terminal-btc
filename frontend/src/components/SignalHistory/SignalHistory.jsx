@@ -54,8 +54,8 @@ export default function SignalHistory({ newSignalTrigger }) {
           disabled={loading}
           id="refresh-history-btn"
         >
-          {loading ? <span className="spinner" /> : '↻'}
-          Refresh
+          <span className="history-refresh-icon">{loading ? <span className="spinner" /> : '↻'}</span>
+          <span>Refresh</span>
         </button>
       </div>
 
