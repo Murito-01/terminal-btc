@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import './SignalPanel.css';
 
 const POSITION_CONFIG = {
@@ -145,12 +146,48 @@ function EmptyState() {
 }
 
 /**
+ * Countdown timer menampilkan sisa waktu hingga update sinyal berikutnya
+ */
+function CountdownTimer({ nextUpdateAt }) {
+  const [remaining, setRemaining] = useState(null);
+
+  useEffect(() => {
+    if (!nextUpdateAt) return;
+
+    const tick = () => {
+      const diff = new Date(nextUpdateAt) - new Date();
+      if (diff <= 0) {
+        setRemaining('Memperbarui...');
+      } else {
+        const m = Math.floor(diff / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        setRemaining(`${m}:${String(s).padStart(2, '0')}`);
+      }
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [nextUpdateAt]);
+
+  if (!remaining) return null;
+
+  return (
+    <div className="signal-countdown">
+      <span className="countdown-icon">⏱</span>
+      <span className="countdown-label">Update berikutnya</span>
+      <span className="countdown-value">{remaining}</span>
+    </div>
+  );
+}
+
+/**
  * Panel utama sinyal
  * @param {object} signal - sinyal dari database (LONG/SHORT tersimpan) atau live state
  * @param {object} liveState - state terkini semua timeframe dari Socket.IO
  * @param {object} latestByTimeframe - sinyal terakhir per timeframe dari API
  */
-export default function SignalPanel({ signal, liveState, latestByTimeframe }) {
+export default function SignalPanel({ signal, liveState, nextUpdateAt, latestByTimeframe }) {
   // Tentukan timeframe yang aktif (gunakan 1H sebagai default)
   const activeTimeframe = signal?.timeframe || '1H';
 
@@ -229,6 +266,9 @@ export default function SignalPanel({ signal, liveState, latestByTimeframe }) {
 
       {/* TP/SL Levels */}
       <TradeLevels signal={levelData} isWait={isWait} />
+
+      {/* Countdown timer */}
+      <CountdownTimer nextUpdateAt={nextUpdateAt} />
 
       {/* Success Rate — hanya untuk sinyal LONG/SHORT */}
       {!isWait && <SuccessRateBar rate={signal?.success_rate} />}

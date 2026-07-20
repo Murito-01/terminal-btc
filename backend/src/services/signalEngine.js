@@ -11,6 +11,9 @@ const lastSignalPosition = {};
 // State terkini semua timeframe untuk dikirim ke frontend
 const currentState = {};
 
+// Waktu update berikutnya (diisi saat engine dimulai)
+let nextUpdateAt = null;
+
 /**
  * Deteksi sinyal dari data indikator yang sudah dihitung
  * Logika:
@@ -82,7 +85,7 @@ async function runAnalysisForTimeframe(timeframe, io) {
 
     // Emit state update ke semua client (termasuk WAIT state)
     if (io) {
-      io.emit('state_update', currentState);
+      io.emit('state_update', { ...currentState, _meta: { next_update_at: nextUpdateAt } });
     }
 
     // Jika ada sinyal LONG/SHORT DAN berbeda dari sinyal terakhir di timeframe ini
@@ -143,18 +146,24 @@ async function runAllAnalysis(io) {
 }
 
 /**
- * Mulai signal engine — berjalan otomatis setiap interval (default: setiap 1 menit)
+ * Mulai signal engine — berjalan otomatis setiap interval (default: setiap 15 menit)
  * @param {Server} io - Socket.IO server instance
- * @param {number} intervalMs - interval dalam milidetik (default: 60000 = 1 menit)
+ * @param {number} intervalMs - interval dalam milidetik (default: 900000 = 15 menit)
  */
-function startSignalEngine(io, intervalMs = 60 * 1000) {
-  console.log('🚀 Signal Engine dimulai! Menganalisa setiap', intervalMs / 1000, 'detik...');
+function startSignalEngine(io, intervalMs = 15 * 60 * 1000) {
+  console.log('🚀 Signal Engine dimulai! Menganalisa setiap', intervalMs / 60000, 'menit...');
+
+  // Set waktu update berikutnya
+  nextUpdateAt = new Date(Date.now() + intervalMs).toISOString();
 
   // Jalankan langsung saat startup
   runAllAnalysis(io);
 
   // Jalankan secara periodik
-  const timer = setInterval(() => runAllAnalysis(io), intervalMs);
+  const timer = setInterval(() => {
+    nextUpdateAt = new Date(Date.now() + intervalMs).toISOString();
+    runAllAnalysis(io);
+  }, intervalMs);
 
   // Kembalikan fungsi stop untuk cleanup jika diperlukan
   return () => clearInterval(timer);

@@ -15,7 +15,7 @@ export default function DashboardPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [multiView, setMultiView] = useState(false);
   const [signalTrigger, setSignalTrigger] = useState(0);
-  const { connected, latestSignal, liveState } = useSocket();
+  const { connected, latestSignal, liveState, nextUpdateAt } = useSocket();
 
   const fetchLatestSignals = useCallback(async () => {
     try {
@@ -100,6 +100,7 @@ export default function DashboardPage() {
             <SignalPanel
               signal={currentSignal}
               liveState={liveState}
+              nextUpdateAt={nextUpdateAt}
               latestByTimeframe={latestByTimeframe}
             />
             <IndicatorPanel signal={currentSignal} liveState={liveState} />
