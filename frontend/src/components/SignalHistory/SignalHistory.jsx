@@ -5,7 +5,12 @@ import './SignalHistory.css';
 const POSITION_ICONS = { LONG: '▲', SHORT: '▼', WAIT: '⏸' };
 
 function formatDateTime(dateStr) {
-  return new Date(dateStr).toLocaleString('id-ID', {
+  if (!dateStr) return '—';
+  // SQLite menyimpan CURRENT_TIMESTAMP tanpa suffix 'Z' (UTC), normalisasi dulu
+  const normalized = dateStr.endsWith('Z') || dateStr.includes('+')
+    ? dateStr
+    : dateStr.replace(' ', 'T') + 'Z';
+  return new Date(normalized).toLocaleString('id-ID', {
     timeZone: 'Asia/Jakarta',
     day: '2-digit',
     month: '2-digit',

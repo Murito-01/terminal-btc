@@ -217,7 +217,11 @@ export default function SignalPanel({ signal, liveState, nextUpdateAt, latestByT
 
   const formatTime = (dateStr) => {
     if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleString('id-ID', {
+    // SQLite menyimpan datetime tanpa suffix 'Z', tambahkan agar diparsing sebagai UTC
+    const normalized = dateStr.endsWith('Z') || dateStr.includes('+') 
+      ? dateStr 
+      : dateStr.replace(' ', 'T') + 'Z';
+    return new Date(normalized).toLocaleString('id-ID', {
       timeZone: 'Asia/Jakarta',
       day: '2-digit',
       month: '2-digit',
@@ -227,6 +231,8 @@ export default function SignalPanel({ signal, liveState, nextUpdateAt, latestByT
   };
 
   const signalTime = signal?.created_at || liveData?.updated_at;
+
+
 
   return (
     <div className={`signal-panel ${config.colorClass}`} id="signal-panel">
