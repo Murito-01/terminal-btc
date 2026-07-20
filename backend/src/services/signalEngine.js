@@ -146,27 +146,54 @@ async function runAllAnalysis(io) {
 }
 
 /**
- * Mulai signal engine — berjalan otomatis setiap interval (default: setiap 15 menit)
- * @param {Server} io - Socket.IO server instance
- * @param {number} intervalMs - interval dalam milidetik (default: 900000 = 15 menit)
+ * Hitung milidetik hingga menit quarter berikutnya (:00, :15, :30, :45)
  */
-function startSignalEngine(io, intervalMs = 15 * 60 * 1000) {
-  console.log('🚀 Signal Engine dimulai! Menganalisa setiap', intervalMs / 60000, 'menit...');
+function msUntilNextQuarter() {
+  const now = new Date();
+  const currentMinute = now.getMinutes();
+  const currentSecond = now.getSeconds();
+  const currentMs     = now.getMilliseconds();
 
-  // Set waktu update berikutnya
-  nextUpdateAt = new Date(Date.now() + intervalMs).toISOString();
+  // Menit quarter berikutnya (0, 15, 30, 45)
+  const nextQuarterMinute = Math.ceil((currentMinute + 1) / 15) * 15 % 60;
 
-  // Jalankan langsung saat startup
+  // Selisih menit
+  let diffMinutes = nextQuarterMinute - currentMinute;
+  if (diffMinutes <= 0) diffMinutes += 60;
+
+  // Kurangi detik dan milidetik yang sudah berjalan
+  const diffMs = diffMinutes * 60 * 1000 - currentSecond * 1000 - currentMs;
+  return diffMs;
+}
+
+/**
+ * Mulai signal engine — berjalan otomatis di menit :00, :15, :30, :45 setiap jam
+ * @param {Server} io - Socket.IO server instance
+ */
+function startSignalEngine(io) {
+  const INTERVAL_MS = 15 * 60 * 1000; // 15 menit
+
+  // Hitung waktu menunggu hingga quarter berikutnya
+  const waitMs = msUntilNextQuarter();
+  nextUpdateAt = new Date(Date.now() + waitMs).toISOString();
+
+  console.log(`🚀 Signal Engine dimulai! Analisa berikutnya pada menit :${String(new Date(Date.now() + waitMs).getMinutes()).padStart(2, '0')} (dalam ${Math.round(waitMs / 1000)} detik)`);
+
+  // Jalankan sekali saat startup
   runAllAnalysis(io);
 
-  // Jalankan secara periodik
-  const timer = setInterval(() => {
-    nextUpdateAt = new Date(Date.now() + intervalMs).toISOString();
-    runAllAnalysis(io);
-  }, intervalMs);
+  // Fungsi penjadwal rekursif
+  function scheduleNext() {
+    const delay = msUntilNextQuarter();
+    nextUpdateAt = new Date(Date.now() + delay).toISOString();
 
-  // Kembalikan fungsi stop untuk cleanup jika diperlukan
-  return () => clearInterval(timer);
+    setTimeout(() => {
+      runAllAnalysis(io);
+      scheduleNext(); // jadwalkan quarter berikutnya
+    }, delay);
+  }
+
+  scheduleNext();
 }
 
 module.exports = { startSignalEngine, runAllAnalysis, detectSignal, currentState };

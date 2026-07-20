@@ -108,6 +108,6 @@ server.listen(PORT, () => {
   console.log(`💊 Health check: GET http://localhost:${PORT}/api/health`);
   console.log('');
 
-  // Mulai Signal Engine otomatis (polling Binance setiap 1 menit)
-  startSignalEngine(io, 60 * 1000);
+  // Mulai Signal Engine otomatis (jadwal di menit :00, :15, :30, :45 setiap jam)
+  startSignalEngine(io);
 });
