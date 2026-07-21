@@ -151,7 +151,7 @@ async function runAllAnalysis(io) {
       priceMap[tf] = currentState[tf].currentPrice;
     }
   }
-  checkOpenSignalOutcomes(priceMap);
+  checkOpenSignalOutcomes(priceMap, io);
 }
 
 /**

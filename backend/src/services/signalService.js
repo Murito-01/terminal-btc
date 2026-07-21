@@ -56,8 +56,9 @@ function saveSignal(data) {
  * - WIN  : harga mencapai TP1
  * - LOSS : harga mencapai SL
  * @param {Object} priceMap - { '15m': 64500, '1H': 64490, ... }
+ * @param {Object} io - Socket.IO server instance (opsional)
  */
-function checkOpenSignalOutcomes(priceMap) {
+function checkOpenSignalOutcomes(priceMap, io = null) {
   const db = getDb();
 
   // Ambil semua sinyal yang belum ada outcome dan punya TP1 & SL
@@ -83,9 +84,9 @@ function checkOpenSignalOutcomes(priceMap) {
     }
 
     if (outcome) {
-      // Update outcome
+      // Update outcome di database
       db.prepare('UPDATE signals SET outcome = ? WHERE id = ?').run(outcome, sig.id);
-      console.log(`📊 Outcome ditetapkan: Sinyal #${sig.id} [${sig.timeframe}] ${sig.position_type} → ${outcome} (price: ${currentPrice})`);
+      console.log(`📊 Outcome: Sinyal #${sig.id} [${sig.timeframe}] ${sig.position_type} → ${outcome} (price: ${currentPrice})`);
 
       // Update success_rate semua sinyal dengan timeframe+position_type yang sama
       const rate = calculateSuccessRate(sig.timeframe, sig.position_type);
@@ -94,6 +95,17 @@ function checkOpenSignalOutcomes(priceMap) {
           UPDATE signals SET success_rate = ?
           WHERE timeframe = ? AND position_type = ?
         `).run(rate, sig.timeframe, sig.position_type);
+      }
+
+      // Emit ke frontend agar SignalPanel bisa update real-time
+      const updatedSignal = db.prepare('SELECT * FROM signals WHERE id = ?').get(sig.id);
+      if (io) {
+        io.emit('signal_outcome', {
+          signal: updatedSignal,
+          outcome,
+          currentPrice,
+          success_rate: rate,
+        });
       }
     }
   }
