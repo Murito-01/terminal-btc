@@ -1,6 +1,6 @@
 const { getKlines } = require('./binanceService');
 const { analyzeCandles, calcTPSL } = require('./indicatorService');
-const { saveSignal } = require('./signalService');
+const { saveSignal, checkOpenSignalOutcomes } = require('./signalService');
 
 // Timeframe yang dianalisa secara otomatis
 const TIMEFRAMES = ['15m', '1H', '4H', '1D'];
@@ -143,6 +143,15 @@ async function runAllAnalysis(io) {
   for (const tf of TIMEFRAMES) {
     await runAnalysisForTimeframe(tf, io);
   }
+
+  // Setelah semua timeframe selesai, periksa outcome sinyal terbuka
+  const priceMap = {};
+  for (const tf of TIMEFRAMES) {
+    if (currentState[tf]?.currentPrice) {
+      priceMap[tf] = currentState[tf].currentPrice;
+    }
+  }
+  checkOpenSignalOutcomes(priceMap);
 }
 
 /**

@@ -50,6 +50,55 @@ function saveSignal(data) {
   return db.prepare('SELECT * FROM signals WHERE id = ?').get(result.lastInsertRowid);
 }
 
+/**
+ * Periksa sinyal yang belum memiliki outcome (WIN/LOSS).
+ * Dibandingkan dengan harga terkini per timeframe.
+ * - WIN  : harga mencapai TP1
+ * - LOSS : harga mencapai SL
+ * @param {Object} priceMap - { '15m': 64500, '1H': 64490, ... }
+ */
+function checkOpenSignalOutcomes(priceMap) {
+  const db = getDb();
+
+  // Ambil semua sinyal yang belum ada outcome dan punya TP1 & SL
+  const openSignals = db.prepare(`
+    SELECT * FROM signals
+    WHERE outcome IS NULL
+      AND tp1 IS NOT NULL
+      AND sl IS NOT NULL
+  `).all();
+
+  for (const sig of openSignals) {
+    const currentPrice = priceMap[sig.timeframe];
+    if (!currentPrice) continue;
+
+    let outcome = null;
+
+    if (sig.position_type === 'LONG') {
+      if (currentPrice >= sig.tp1)  outcome = 'WIN';
+      else if (currentPrice <= sig.sl) outcome = 'LOSS';
+    } else if (sig.position_type === 'SHORT') {
+      if (currentPrice <= sig.tp1)  outcome = 'WIN';
+      else if (currentPrice >= sig.sl) outcome = 'LOSS';
+    }
+
+    if (outcome) {
+      // Update outcome
+      db.prepare('UPDATE signals SET outcome = ? WHERE id = ?').run(outcome, sig.id);
+      console.log(`📊 Outcome ditetapkan: Sinyal #${sig.id} [${sig.timeframe}] ${sig.position_type} → ${outcome} (price: ${currentPrice})`);
+
+      // Update success_rate semua sinyal dengan timeframe+position_type yang sama
+      const rate = calculateSuccessRate(sig.timeframe, sig.position_type);
+      if (rate !== null) {
+        db.prepare(`
+          UPDATE signals SET success_rate = ?
+          WHERE timeframe = ? AND position_type = ?
+        `).run(rate, sig.timeframe, sig.position_type);
+      }
+    }
+  }
+}
+
 
 /**
  * Ambil semua sinyal dengan pagination
@@ -111,4 +160,6 @@ module.exports = {
   getLatestSignal,
   logWebhook,
   calculateSuccessRate,
+  checkOpenSignalOutcomes,
 };
+
