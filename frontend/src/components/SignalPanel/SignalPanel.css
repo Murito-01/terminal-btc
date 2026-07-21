@@ -456,3 +456,118 @@
   min-width: 36px;
   text-align: right;
 }
+
+/* =====================================
+   RUNNING badge — sinyal masih aktif
+   ===================================== */
+.signal-running-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 208, 132, 0.15);
+  border: 1px solid rgba(0, 208, 132, 0.4);
+  border-radius: var(--radius-full);
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-long);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  animation: pulse 2s infinite;
+  margin-top: var(--space-1);
+}
+
+/* =====================================
+   Done Card — sinyal yang sudah selesai
+   ===================================== */
+.signal-done-card {
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.done-card--win {
+  border-color: rgba(0, 208, 132, 0.3);
+  background: rgba(0, 208, 132, 0.05);
+}
+
+.done-card--loss {
+  border-color: rgba(255, 77, 109, 0.3);
+  background: rgba(255, 77, 109, 0.05);
+}
+
+.done-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.done-card-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-secondary);
+}
+
+.done-outcome-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.outcome--win {
+  background: rgba(0, 208, 132, 0.15);
+  color: var(--color-long);
+  border: 1px solid rgba(0, 208, 132, 0.4);
+}
+
+.outcome--loss {
+  background: rgba(255, 77, 109, 0.15);
+  color: var(--color-short);
+  border: 1px solid rgba(255, 77, 109, 0.4);
+}
+
+.done-card-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.done-position {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.done-position.signal--long { color: var(--color-long); }
+.done-position.signal--short { color: var(--color-short); }
+
+.done-timeframe {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--color-bg-elevated);
+  color: var(--text-secondary);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.done-entry {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.done-hit-tp {
+  color: var(--color-long);
+  font-weight: 700;
+}
+
+.done-hit-sl {
+  color: var(--color-short);
+  font-weight: 700;
+}
+

@@ -3,11 +3,12 @@ import { io } from 'socket.io-client';
 
 export function useSocket() {
   const socketRef = useRef(null);
-  const [connected, setConnected]       = useState(false);
-  const [latestSignal, setLatestSignal] = useState(null);
-  const [liveState, setLiveState]       = useState(null);
-  // Waktu update berikutnya dari Signal Engine
-  const [nextUpdateAt, setNextUpdateAt] = useState(null);
+  const [connected, setConnected]           = useState(false);
+  const [latestSignal, setLatestSignal]     = useState(null);
+  const [liveState, setLiveState]           = useState(null);
+  const [nextUpdateAt, setNextUpdateAt]     = useState(null);
+  // Outcome update (WIN/LOSS) dari Signal Engine
+  const [outcomeUpdate, setOutcomeUpdate]   = useState(null);
 
   useEffect(() => {
     socketRef.current = io('/', {
@@ -42,10 +43,16 @@ export function useSocket() {
       }
     });
 
+    // Outcome update: sinyal sudah hit TP atau SL
+    socketRef.current.on('signal_outcome', (data) => {
+      console.log('📊 Signal outcome received:', data);
+      setOutcomeUpdate(data);
+    });
+
     return () => {
       socketRef.current?.disconnect();
     };
   }, []);
 
-  return { connected, latestSignal, liveState, nextUpdateAt, socket: socketRef.current };
+  return { connected, latestSignal, liveState, nextUpdateAt, outcomeUpdate, socket: socketRef.current };
 }

@@ -199,12 +199,77 @@ export default function SignalPanel({ signal, liveState, nextUpdateAt, latestByT
     return <EmptyState />;
   }
 
-  // Tentukan data yang akan ditampilkan
-  // Prioritas: sinyal terbaru dari DB (LONG/SHORT) → live state dari engine
+  // ── Cek apakah sinyal terakhir sudah SELESAI (outcome WIN/LOSS) ──
+  const signalDone = signal?.outcome === 'WIN' || signal?.outcome === 'LOSS';
+
+  // Jika sinyal sudah selesai, tampilkan "Done" panel
+  if (signalDone) {
+    const outcomeIsWin  = signal.outcome === 'WIN';
+    const prevConfig    = POSITION_CONFIG[signal.position_type] || POSITION_CONFIG.WAIT;
+    return (
+      <div className={`signal-panel signal--wait`} id="signal-panel">
+        <div className="signal-badge-container">
+          <div className="signal-badge-glow" />
+          <div className="signal-icon-circle">
+            <span className="signal-icon">⏸</span>
+          </div>
+          <div className="signal-main-badge">WAIT & SEE</div>
+          <p className="signal-desc">Sinyal sebelumnya telah selesai — Menunggu sinyal baru</p>
+        </div>
+
+        {/* Card sinyal yang sudah selesai */}
+        <div className={`signal-done-card ${outcomeIsWin ? 'done-card--win' : 'done-card--loss'}`}>
+          <div className="done-card-header">
+            <span className="done-card-label">Sinyal Terakhir</span>
+            <span className={`done-outcome-badge ${outcomeIsWin ? 'outcome--win' : 'outcome--loss'}`}>
+              {outcomeIsWin ? '✅ TP HIT' : '❌ SL HIT'}
+            </span>
+          </div>
+          <div className="done-card-body">
+            <span className={`done-position ${prevConfig.colorClass}`}>
+              {prevConfig.emoji} {signal.position_type}
+            </span>
+            <span className="done-timeframe">{signal.timeframe}</span>
+          </div>
+          <div className="done-entry">
+            Entry: <strong>${Number(signal.entry_price).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+            {' → '}
+            {outcomeIsWin
+              ? <span className="done-hit-tp">TP1 ${Number(signal.tp1).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              : <span className="done-hit-sl">SL ${Number(signal.sl).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+            }
+          </div>
+        </div>
+
+        <CountdownTimer nextUpdateAt={nextUpdateAt} />
+
+        {/* Timeframe summary pills */}
+        {liveState && (
+          <div className="signal-tf-summary">
+            <span className="signal-tf-label">Status per Timeframe:</span>
+            <div className="signal-tf-pills">
+              {Object.entries(liveState).map(([tf, tfData]) => {
+                const tfConfig = POSITION_CONFIG[tfData?.position] || POSITION_CONFIG.WAIT;
+                return (
+                  <div key={tf} className={`tf-pill tf-pill--${(tfData?.position || 'wait').toLowerCase()}`}>
+                    <span className="tf-pill-tf">{tf}</span>
+                    <span className="tf-pill-val">{tfConfig.emoji} {tfData?.position || 'WAIT'}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Sinyal aktif (outcome NULL) atau WAIT ──
   const displayData = signal || liveData;
   const position    = displayData?.position_type || liveData?.position || 'WAIT';
   const config      = POSITION_CONFIG[position] || POSITION_CONFIG.WAIT;
   const isWait      = position === 'WAIT';
+  const isActive    = !isWait && signal && !signal.outcome; // masih running
 
   // Siapkan data level TP/SL dari live state atau dari sinyal DB
   const levelData = {
@@ -218,8 +283,8 @@ export default function SignalPanel({ signal, liveState, nextUpdateAt, latestByT
   const formatTime = (dateStr) => {
     if (!dateStr) return '—';
     // SQLite menyimpan datetime tanpa suffix 'Z', tambahkan agar diparsing sebagai UTC
-    const normalized = dateStr.endsWith('Z') || dateStr.includes('+') 
-      ? dateStr 
+    const normalized = dateStr.endsWith('Z') || dateStr.includes('+')
+      ? dateStr
       : dateStr.replace(' ', 'T') + 'Z';
     return new Date(normalized).toLocaleString('id-ID', {
       timeZone: 'Asia/Jakarta',
@@ -232,8 +297,6 @@ export default function SignalPanel({ signal, liveState, nextUpdateAt, latestByT
 
   const signalTime = signal?.created_at || liveData?.updated_at;
 
-
-
   return (
     <div className={`signal-panel ${config.colorClass}`} id="signal-panel">
       {/* Main Signal Badge */}
@@ -245,6 +308,10 @@ export default function SignalPanel({ signal, liveState, nextUpdateAt, latestByT
         <div className="signal-main-badge">
           {config.label}
         </div>
+        {/* Status badge RUNNING jika sinyal masih aktif */}
+        {isActive && (
+          <span className="signal-running-badge">⚡ RUNNING</span>
+        )}
         <p className="signal-desc">{config.desc}</p>
       </div>
 

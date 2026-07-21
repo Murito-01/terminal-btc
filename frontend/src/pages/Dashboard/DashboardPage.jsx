@@ -15,7 +15,7 @@ export default function DashboardPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [multiView, setMultiView] = useState(false);
   const [signalTrigger, setSignalTrigger] = useState(0);
-  const { connected, latestSignal, liveState, nextUpdateAt } = useSocket();
+  const { connected, latestSignal, liveState, nextUpdateAt, outcomeUpdate } = useSocket();
 
   const fetchLatestSignals = useCallback(async () => {
     try {
@@ -42,6 +42,14 @@ export default function DashboardPage() {
       fetchLatestSignals();
     }
   }, [latestSignal, fetchLatestSignals]);
+
+  // Update currentSignal saat outcome (WIN/LOSS) diterima via socket
+  useEffect(() => {
+    if (outcomeUpdate?.signal) {
+      setCurrentSignal(outcomeUpdate.signal);
+      setSignalTrigger(prev => prev + 1); // refresh history table
+    }
+  }, [outcomeUpdate]);
 
   return (
     <div className="app-layout">
