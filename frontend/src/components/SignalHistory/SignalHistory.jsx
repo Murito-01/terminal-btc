@@ -80,7 +80,6 @@ export default function SignalHistory({ newSignalTrigger }) {
                   <th>Waktu</th>
                   <th>Timeframe</th>
                   <th>Posisi</th>
-                  <th>Win Rate</th>
                   <th>EMA 9</th>
                   <th>EMA 13</th>
                   <th>Stoch K</th>
@@ -100,18 +99,6 @@ export default function SignalHistory({ newSignalTrigger }) {
                       <span className={`pos-badge pos-badge--${sig.position_type.toLowerCase()}`}>
                         {POSITION_ICONS[sig.position_type]} {sig.position_type}
                       </span>
-                    </td>
-                    <td className="td-rate">
-                      {sig.success_rate !== null ? (
-                        <span className={`rate-val ${
-                          sig.success_rate >= 70 ? 'rate--good' :
-                          sig.success_rate >= 50 ? 'rate--ok' : 'rate--bad'
-                        }`}>
-                          {sig.success_rate}%
-                        </span>
-                      ) : (
-                        <span className="rate-na">—</span>
-                      )}
                     </td>
                     <td className="td-num mono">
                       {sig.ema9 != null ? Number(sig.ema9).toFixed(2) : '—'}

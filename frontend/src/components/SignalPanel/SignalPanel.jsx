@@ -27,24 +27,25 @@ function SuccessRateBar({ rate }) {
     return (
       <div className="sr-container">
         <div className="sr-label-row">
-          <span className="sr-label">Tingkat Keberhasilan</span>
+          <span className="sr-label">Tingkat Keberhasilan Sinyal</span>
           <span className="sr-value sr-value--na">N/A</span>
         </div>
         <div className="sr-bar-track">
           <div className="sr-bar-fill sr-bar-fill--empty" />
         </div>
-        <p className="sr-note">Data histori masih terbatas</p>
+        <p className="sr-note">Data histori sinyal masih terbatas</p>
       </div>
     );
   }
 
   const colorClass = rate >= 70 ? 'sr-bar--good' : rate >= 50 ? 'sr-bar--ok' : 'sr-bar--bad';
+  const valColorClass = rate >= 70 ? 'sr-val--good' : rate >= 50 ? 'sr-val--ok' : 'sr-val--bad';
 
   return (
     <div className="sr-container">
       <div className="sr-label-row">
-        <span className="sr-label">Tingkat Keberhasilan</span>
-        <span className="sr-value">{rate}%</span>
+        <span className="sr-label">Tingkat Keberhasilan Sinyal</span>
+        <span className={`sr-value ${valColorClass}`}>{rate}%</span>
       </div>
       <div className="sr-bar-track">
         <div
@@ -53,7 +54,7 @@ function SuccessRateBar({ rate }) {
         />
       </div>
       <p className="sr-note">
-        {rate >= 70 ? '✓ Akurasi tinggi' : rate >= 50 ? '~ Akurasi sedang' : '✗ Akurasi rendah'}
+        {rate >= 70 ? '✓ Akurasi histori tinggi' : rate >= 50 ? '~ Akurasi histori sedang' : '✗ Akurasi histori rendah'}
       </p>
     </div>
   );
@@ -243,6 +244,9 @@ export default function SignalPanel({ signal, liveState, nextUpdateAt, latestByT
 
         <CountdownTimer nextUpdateAt={nextUpdateAt} />
 
+        {/* Win Rate / Success Rate */}
+        <SuccessRateBar rate={signal?.success_rate} />
+
         {/* Timeframe summary pills */}
         {liveState && (
           <div className="signal-tf-summary">
@@ -343,8 +347,8 @@ export default function SignalPanel({ signal, liveState, nextUpdateAt, latestByT
       {/* Countdown timer */}
       <CountdownTimer nextUpdateAt={nextUpdateAt} />
 
-      {/* Success Rate — hanya untuk sinyal LONG/SHORT */}
-      {!isWait && <SuccessRateBar rate={signal?.success_rate} />}
+      {/* Success Rate / Win Rate */}
+      <SuccessRateBar rate={signal?.success_rate} />
 
       {/* Timeframe summary pills */}
       {liveState && (
