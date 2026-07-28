@@ -12,6 +12,7 @@ const signalRoutes = require('./routes/signals');
 const webhookRoutes = require('./routes/webhook');
 const settingsRoutes = require('./routes/settings');
 const chartDataRoutes = require('./routes/chartData');
+const performanceRoutes = require('./routes/performance');
 
 // Signal Engine
 const { startSignalEngine } = require('./services/signalEngine');
@@ -62,6 +63,7 @@ app.use('/api/signals', signalRoutes);
 app.use('/api/webhook', webhookRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/chart-data', chartDataRoutes);
+app.use('/api/performance', performanceRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
