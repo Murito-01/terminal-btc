@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/Auth/LoginPage';
 import RegisterPage from './pages/Auth/RegisterPage';
 import DashboardPage from './pages/Dashboard/DashboardPage';
+import PerformancePage from './pages/Performance/PerformancePage';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -64,6 +65,10 @@ function AppRoutes() {
       <Route
         path="/"
         element={<ProtectedRoute><DashboardPage /></ProtectedRoute>}
+      />
+      <Route
+        path="/performance"
+        element={<ProtectedRoute><PerformancePage /></ProtectedRoute>}
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

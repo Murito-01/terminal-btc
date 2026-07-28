@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import './Header.css';
 
 export default function Header({ connected, onSettingsClick }) {
   const { user, logout } = useAuth();
+  const location = useLocation();
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -46,6 +48,16 @@ export default function Header({ connected, onSettingsClick }) {
           <span className={`live-dot ${connected ? 'live-dot--active' : 'live-dot--inactive'}`} />
           <span className="live-label">{connected ? 'LIVE' : 'OFFLINE'}</span>
         </div>
+
+        {/* Nav Links */}
+        <nav className="header-nav">
+          <Link to="/" className={`header-nav-link ${location.pathname === '/' ? 'header-nav-link--active' : ''}`}>
+            📊 Dashboard
+          </Link>
+          <Link to="/performance" className={`header-nav-link ${location.pathname === '/performance' ? 'header-nav-link--active' : ''}`}>
+            📅 Performance
+          </Link>
+        </nav>
       </div>
 
       <div className="header-center">
