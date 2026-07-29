@@ -11,8 +11,9 @@ const authRoutes = require('./routes/auth');
 const signalRoutes = require('./routes/signals');
 const webhookRoutes = require('./routes/webhook');
 const settingsRoutes = require('./routes/settings');
-const chartDataRoutes = require('./routes/chartData');
+const chartDataRoutes  = require('./routes/chartData');
 const performanceRoutes = require('./routes/performance');
+const backtestRoutes   = require('./routes/backtest');
 
 // Signal Engine
 const { startSignalEngine } = require('./services/signalEngine');
@@ -62,8 +63,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/signals', signalRoutes);
 app.use('/api/webhook', webhookRoutes);
 app.use('/api/settings', settingsRoutes);
-app.use('/api/chart-data', chartDataRoutes);
+app.use('/api/chart-data',  chartDataRoutes);
 app.use('/api/performance', performanceRoutes);
+app.use('/api/backtest',    backtestRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

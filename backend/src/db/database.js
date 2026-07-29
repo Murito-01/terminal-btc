@@ -77,6 +77,7 @@ function initSchema() {
     'ALTER TABLE signals ADD COLUMN tp1 REAL',
     'ALTER TABLE signals ADD COLUMN tp2 REAL',
     'ALTER TABLE signals ADD COLUMN sl REAL',
+    "ALTER TABLE signals ADD COLUMN source TEXT DEFAULT 'live'",  // 'live' | 'backtest'
   ];
   for (const sql of migrations) {
     try { db.exec(sql); } catch (_) { /* kolom sudah ada, abaikan */ }

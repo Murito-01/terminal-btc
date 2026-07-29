@@ -16,24 +16,28 @@ let nextUpdateAt = null;
 
 /**
  * Deteksi sinyal dari data indikator yang sudah dihitung
- * Logika:
- * - LONG  : EMA9 crossover EMA13 (dari bawah ke atas) + Stoch K < 40
- * - SHORT : EMA9 crossunder EMA13 (dari atas ke bawah) + Stoch K > 60
- * - WAIT  : tidak ada crossing
+ * Logika (diperbarui):
+ * - LONG  : EMA9 crossover EMA13 (dari bawah ke atas) + Stoch K sedang NAIK (konfirmasi momentum bullish)
+ * - SHORT : EMA9 crossunder EMA13 (dari atas ke bawah) + Stoch K sedang TURUN (konfirmasi momentum bearish)
+ * - WAIT  : tidak ada crossing atau momentum berlawanan
  */
 function detectSignal(indicators) {
-  const { ema9, ema13, prevEma9, prevEma13, stoch_k } = indicators;
+  const { ema9, ema13, prevEma9, prevEma13, stoch_k, prevStochK } = indicators;
 
   const prevBullish = prevEma9 <= prevEma13;
   const currBullish = ema9 > ema13;
   const prevBearish = prevEma9 >= prevEma13;
   const currBearish = ema9 < ema13;
 
-  if (prevBullish && currBullish && stoch_k < 40) {
+  // Konfirmasi momentum: K naik = bullish momentum, K turun = bearish momentum
+  const momentumBullish = prevStochK != null ? stoch_k >= prevStochK : true;
+  const momentumBearish = prevStochK != null ? stoch_k <= prevStochK : true;
+
+  if (prevBullish && currBullish && momentumBullish) {
     return 'LONG';
   }
 
-  if (prevBearish && currBearish && stoch_k > 60) {
+  if (prevBearish && currBearish && momentumBearish) {
     return 'SHORT';
   }
 
