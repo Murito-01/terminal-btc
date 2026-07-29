@@ -67,6 +67,14 @@ export default function PerformancePage() {
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
 
+  // ── Backtest state ──
+  const [btRunning,  setBtRunning]  = useState(false);
+  const [btResult,   setBtResult]   = useState(null);
+  const [btError,    setBtError]    = useState(null);
+  const [btStart,    setBtStart]    = useState('2026-07-01');
+  const [btEnd,      setBtEnd]      = useState('2026-07-29');
+  const [showBtForm, setShowBtForm] = useState(false);
+
   const fetchData = useCallback(async () => {
     try {
       setError(null);
@@ -80,9 +88,29 @@ export default function PerformancePage() {
     }
   }, []);
 
+  const runBacktest = useCallback(async () => {
+    try {
+      setBtRunning(true);
+      setBtError(null);
+      setBtResult(null);
+      const res = await api.post('/backtest/run', {
+        startDate:     btStart,
+        endDate:       btEnd,
+        timeframes:    ['15m', '1H', '4H', '1D'],
+        clearPrevious: true,
+      });
+      setBtResult(res.data);
+      // Refresh performance table setelah backtest
+      await fetchData();
+    } catch (err) {
+      setBtError('Backtest gagal: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setBtRunning(false);
+    }
+  }, [btStart, btEnd, fetchData]);
+
   useEffect(() => {
     fetchData();
-    // Refresh setiap 5 menit
     const interval = setInterval(fetchData, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [fetchData]);
@@ -124,10 +152,97 @@ export default function PerformancePage() {
                 <button className="perf-refresh-btn" onClick={fetchData} title="Refresh data">
                   ↻ Refresh
                 </button>
+                <button
+                  className="perf-backtest-btn"
+                  onClick={() => setShowBtForm(f => !f)}
+                  id="run-backtest-btn"
+                >
+                  🔬 Backtest
+                </button>
               </div>
             )}
           </div>
         </div>
+
+        {/* ── Backtest Panel ── */}
+        {showBtForm && (
+          <div className="bt-panel" id="backtest-panel">
+            <div className="bt-panel-header">
+              <span className="bt-panel-title">🔬 Jalankan Backtest</span>
+              <span className="bt-panel-desc">
+                Simulasi sinyal berdasarkan data historis Binance. Hasilnya akan disimpan ke Riwayat Sinyal.
+              </span>
+            </div>
+
+            <div className="bt-form">
+              <label className="bt-label">
+                Dari Tanggal
+                <input
+                  type="date"
+                  className="bt-input"
+                  value={btStart}
+                  onChange={e => setBtStart(e.target.value)}
+                  disabled={btRunning}
+                />
+              </label>
+              <label className="bt-label">
+                Sampai Tanggal
+                <input
+                  type="date"
+                  className="bt-input"
+                  value={btEnd}
+                  onChange={e => setBtEnd(e.target.value)}
+                  disabled={btRunning}
+                />
+              </label>
+              <button
+                className="bt-run-btn"
+                onClick={runBacktest}
+                disabled={btRunning}
+                id="confirm-backtest-btn"
+              >
+                {btRunning ? (
+                  <><span className="bt-spinner" /> Memproses...</>
+                ) : (
+                  '▶ Jalankan Backtest'
+                )}
+              </button>
+            </div>
+
+            {btRunning && (
+              <div className="bt-progress">
+                <div className="bt-progress-bar" />
+                <span>Mengambil data historis dari Binance dan menghitung sinyal... (bisa 30–60 detik)</span>
+              </div>
+            )}
+
+            {btError && (
+              <div className="bt-error">⚠️ {btError}</div>
+            )}
+
+            {btResult && (
+              <div className="bt-result">
+                <div className="bt-result-header">
+                  <span className="bt-result-title">✅ {btResult.message}</span>
+                  <span className="bt-result-winrate">Win Rate Keseluruhan: <strong>{btResult.winRate}%</strong></span>
+                </div>
+                <div className="bt-result-grid">
+                  {Object.entries(btResult.summary?.byTimeframe || {}).map(([tf, stat]) => (
+                    <div key={tf} className="bt-tf-card">
+                      <div className="bt-tf-label">{tf}</div>
+                      <div className="bt-tf-stats">
+                        <span className="bt-stat win">{stat.wins ?? 0} WIN</span>
+                        <span className="bt-stat loss">{stat.losses ?? 0} LOSS</span>
+                        <span className="bt-stat run">{stat.running ?? 0} RUN</span>
+                      </div>
+                      <div className="bt-tf-total">{stat.total ?? 0} sinyal</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Legend */}
         <div className="perf-legend">
