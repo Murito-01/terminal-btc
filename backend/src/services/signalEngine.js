@@ -149,13 +149,8 @@ async function runAllAnalysis(io) {
   }
 
   // Setelah semua timeframe selesai, periksa outcome sinyal terbuka
-  const priceMap = {};
-  for (const tf of TIMEFRAMES) {
-    if (currentState[tf]?.currentPrice) {
-      priceMap[tf] = currentState[tf].currentPrice;
-    }
-  }
-  checkOpenSignalOutcomes(priceMap, io);
+  // (async: mengambil data historis OHLCV dari Binance untuk akurasi HIGH/LOW)
+  await checkOpenSignalOutcomes(io);
 }
 
 /**

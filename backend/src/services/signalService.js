@@ -51,14 +51,20 @@ function saveSignal(data) {
 }
 
 /**
- * Periksa sinyal yang belum memiliki outcome (WIN/LOSS).
- * Dibandingkan dengan harga terkini per timeframe.
- * - WIN  : harga mencapai TP1
- * - LOSS : harga mencapai SL
- * @param {Object} priceMap - { '15m': 64500, '1H': 64490, ... }
- * @param {Object} io - Socket.IO server instance (opsional)
+ * Periksa sinyal yang belum memiliki outcome (WIN/LOSS) menggunakan data
+ * historis OHLCV dari Binance.
+ *
+ * Pendekatan yang benar:
+ *   - Ambil semua candle sejak sinyal dibuat hingga sekarang
+ *   - Iterasi candle satu per satu, cek HIGH/LOW
+ *   - Mana yang tersentuh lebih dulu (TP atau SL) = outcome
+ *
+ * Catatan: fungsi ini ASYNC karena mengambil data dari Binance API.
+ *
+ * @param {Object} io - Socket.IO instance (opsional)
  */
-function checkOpenSignalOutcomes(priceMap, io = null) {
+async function checkOpenSignalOutcomes(io = null) {
+  const { getKlinesRange } = require('./binanceService');
   const db = getDb();
 
   // Ambil semua sinyal yang belum ada outcome dan punya TP1 & SL
@@ -66,47 +72,67 @@ function checkOpenSignalOutcomes(priceMap, io = null) {
     SELECT * FROM signals
     WHERE outcome IS NULL
       AND tp1 IS NOT NULL
-      AND sl IS NOT NULL
+      AND sl  IS NOT NULL
   `).all();
 
+  if (openSignals.length === 0) return;
+
+  const TF_MAP = { '15m': '15m', '1H': '1h', '4H': '4h', '1D': '1d' };
+
   for (const sig of openSignals) {
-    const currentPrice = priceMap[sig.timeframe];
-    if (!currentPrice) continue;
+    try {
+      const interval   = TF_MAP[sig.timeframe] || '1h';
+      // Waktu mulai: saat candle sinyal DITUTUP (gunakan created_at sebagai titik awal)
+      const startMs    = new Date(sig.created_at).getTime();
+      const nowMs      = Date.now();
 
-    let outcome = null;
+      // Ambil candle dari waktu sinyal dibuat sampai sekarang
+      const candles = await getKlinesRange('BTCUSDT', interval, startMs, nowMs);
+      if (!candles || candles.length === 0) continue;
 
-    if (sig.position_type === 'LONG') {
-      if (currentPrice >= sig.tp1)  outcome = 'WIN';
-      else if (currentPrice <= sig.sl) outcome = 'LOSS';
-    } else if (sig.position_type === 'SHORT') {
-      if (currentPrice <= sig.tp1)  outcome = 'WIN';
-      else if (currentPrice >= sig.sl) outcome = 'LOSS';
-    }
+      let outcome = null;
 
-    if (outcome) {
-      // Update outcome di database
-      db.prepare('UPDATE signals SET outcome = ? WHERE id = ?').run(outcome, sig.id);
-      console.log(`📊 Outcome: Sinyal #${sig.id} [${sig.timeframe}] ${sig.position_type} → ${outcome} (price: ${currentPrice})`);
-
-      // Update success_rate semua sinyal dengan timeframe+position_type yang sama
-      const rate = calculateSuccessRate(sig.timeframe, sig.position_type);
-      if (rate !== null) {
-        db.prepare(`
-          UPDATE signals SET success_rate = ?
-          WHERE timeframe = ? AND position_type = ?
-        `).run(rate, sig.timeframe, sig.position_type);
+      for (const c of candles) {
+        if (sig.position_type === 'LONG') {
+          const hitTP = c.high >= sig.tp1;
+          const hitSL = c.low  <= sig.sl;
+          if (hitTP && !hitSL) { outcome = 'WIN';  break; }
+          if (hitSL && !hitTP) { outcome = 'LOSS'; break; }
+          if (hitTP && hitSL)  { outcome = c.close >= c.open ? 'WIN' : 'LOSS'; break; }
+        } else if (sig.position_type === 'SHORT') {
+          const hitTP = c.low  <= sig.tp1;
+          const hitSL = c.high >= sig.sl;
+          if (hitTP && !hitSL) { outcome = 'WIN';  break; }
+          if (hitSL && !hitTP) { outcome = 'LOSS'; break; }
+          if (hitTP && hitSL)  { outcome = c.close <= c.open ? 'WIN' : 'LOSS'; break; }
+        }
       }
 
-      // Emit ke frontend agar SignalPanel bisa update real-time
-      const updatedSignal = db.prepare('SELECT * FROM signals WHERE id = ?').get(sig.id);
-      if (io) {
-        io.emit('signal_outcome', {
-          signal: updatedSignal,
-          outcome,
-          currentPrice,
-          success_rate: rate,
-        });
+      if (outcome) {
+        db.prepare('UPDATE signals SET outcome = ? WHERE id = ?').run(outcome, sig.id);
+        console.log(`📊 Outcome: Sinyal #${sig.id} [${sig.timeframe}] ${sig.position_type} → ${outcome}`);
+
+        // Update success_rate semua sinyal dengan timeframe+position_type yang sama
+        const rate = calculateSuccessRate(sig.timeframe, sig.position_type);
+        if (rate !== null) {
+          db.prepare(`
+            UPDATE signals SET success_rate = ?
+            WHERE timeframe = ? AND position_type = ?
+          `).run(rate, sig.timeframe, sig.position_type);
+        }
+
+        // Emit ke frontend
+        const updatedSignal = db.prepare('SELECT * FROM signals WHERE id = ?').get(sig.id);
+        if (io) {
+          io.emit('signal_outcome', {
+            signal:       updatedSignal,
+            outcome,
+            success_rate: rate,
+          });
+        }
       }
+    } catch (err) {
+      console.error(`[checkOutcome] Error sinyal #${sig.id}:`, err.message);
     }
   }
 }
