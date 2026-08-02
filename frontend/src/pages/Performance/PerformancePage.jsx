@@ -26,8 +26,13 @@ function getCellStyle(value) {
   }
 }
 
-function PnlCell({ value, isYear = false }) {
+function PnlCell({ value, isYear = false, wins, losses }) {
   const style = getCellStyle(value);
+  const total = (wins ?? 0) + (losses ?? 0);
+  const wr    = total > 0 ? Math.round((wins ?? 0) / total * 100) : null;
+  const title = total > 0
+    ? `${wins ?? 0} WIN · ${losses ?? 0} LOSS · WR ${wr}%`
+    : undefined;
 
   if (value === null || value === undefined) {
     return (
@@ -41,9 +46,15 @@ function PnlCell({ value, isYear = false }) {
   const formatted = value === 0 ? '0.00' : (value > 0 ? '+' : '') + value.toFixed(2);
 
   return (
-    <td className={`perf-cell ${isYear ? 'perf-cell--year' : ''} ${value > 0 ? 'perf-cell--pos' : value < 0 ? 'perf-cell--neg' : 'perf-cell--zero'}`}
-        style={{ background: style.bg, color: style.text }}>
+    <td
+      className={`perf-cell ${isYear ? 'perf-cell--year' : ''} ${value > 0 ? 'perf-cell--pos' : value < 0 ? 'perf-cell--neg' : 'perf-cell--zero'}`}
+      style={{ background: style.bg, color: style.text }}
+      title={title}
+    >
       {formatted}
+      {total > 0 && (
+        <span className="perf-cell-sub">{wins}W/{losses}L</span>
+      )}
     </td>
   );
 }
@@ -141,6 +152,15 @@ export default function PerformancePage() {
                 <span className="perf-meta-item">
                   <span className="perf-meta-label">Total Sinyal</span>
                   <span className="perf-meta-value">{data.total_signals}</span>
+                </span>
+                <span className="perf-meta-divider" />
+                <span className="perf-meta-item">
+                  <span className="perf-meta-label">WIN / LOSS</span>
+                  <span className="perf-meta-value">
+                    <span style={{ color: '#00d084' }}>{data.total_wins ?? 0}</span>
+                    {' / '}
+                    <span style={{ color: '#ff4d6d' }}>{data.total_losses ?? 0}</span>
+                  </span>
                 </span>
                 <span className="perf-meta-divider" />
                 <span className="perf-meta-item">
@@ -309,10 +329,14 @@ export default function PerformancePage() {
                 {data.years.map(year => (
                   <tr key={year} className="perf-row">
                     <td className="perf-row-label">{year}</td>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                      <PnlCell key={m} value={data.data[year]?.[m] ?? null} />
-                    ))}
-                    <PnlCell value={data.data[year]?.year ?? null} isYear />
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
+                      const cell = data.data[year]?.[m];
+                      return <PnlCell key={m} value={cell?.pnl ?? null} wins={cell?.wins} losses={cell?.losses} />;
+                    })}
+                    {(() => {
+                      const y = data.data[year]?.year;
+                      return <PnlCell value={y?.pnl ?? null} wins={y?.wins} losses={y?.losses} isYear />;
+                    })()}
                   </tr>
                 ))}
 
@@ -336,6 +360,36 @@ export default function PerformancePage() {
             </div>
           )}
         </div>
+
+        {/* Breakdown per Timeframe */}
+        {data?.by_timeframe && Object.keys(data.by_timeframe).length > 0 && (
+          <div className="perf-tf-section">
+            <div className="perf-tf-title">📊 Breakdown per Timeframe — Juli 2026</div>
+            <div className="perf-tf-grid">
+              {Object.entries(data.by_timeframe)
+                .sort(([a], [b]) => ['15m','1H','4H','1D'].indexOf(a) - ['15m','1H','4H','1D'].indexOf(b))
+                .map(([tf, stat]) => {
+                  const total = stat.wins + stat.losses;
+                  const wr    = total > 0 ? Math.round(stat.wins / total * 100) : 0;
+                  const pnl   = stat.pnl;
+                  return (
+                    <div key={tf} className={`perf-tf-card ${pnl > 0 ? 'pos' : pnl < 0 ? 'neg' : ''}`}>
+                      <div className="perf-tf-name">{tf}</div>
+                      <div className={`perf-tf-pnl ${pnl > 0 ? 'pos' : pnl < 0 ? 'neg' : ''}`}>
+                        {pnl > 0 ? '+' : ''}{pnl.toFixed(2)}%
+                      </div>
+                      <div className="perf-tf-stats">
+                        <span className="perf-tf-win">{stat.wins} WIN</span>
+                        <span className="perf-tf-sep">·</span>
+                        <span className="perf-tf-loss">{stat.losses} LOSS</span>
+                      </div>
+                      <div className="perf-tf-wr">Win Rate: {wr}%</div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
 
         {/* Info kalkulasi */}
         <div className="perf-info-cards">

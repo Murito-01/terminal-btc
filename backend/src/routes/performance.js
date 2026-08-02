@@ -73,10 +73,12 @@ router.get('/monthly', authenticateToken, (req, res) => {
       const month = d.getMonth() + 1; // 1–12
 
       if (!data[year]) data[year] = {};
-      if (!data[year][month]) data[year][month] = { sum: 0, count: 0 };
+      if (!data[year][month]) data[year][month] = { sum: 0, count: 0, wins: 0, losses: 0 };
 
       data[year][month].sum   += pnl;
       data[year][month].count += 1;
+      if (sig.outcome === 'WIN')  data[year][month].wins++;
+      if (sig.outcome === 'LOSS') data[year][month].losses++;
 
       if (!monthCountPerYear[year]) monthCountPerYear[year] = new Set();
       monthCountPerYear[year].add(month);
@@ -89,14 +91,27 @@ router.get('/monthly', authenticateToken, (req, res) => {
     for (const year of years) {
       monthly[year] = {};
       let yearTotal = 0;
+      let yearWins = 0, yearLosses = 0;
       for (let m = 1; m <= 12; m++) {
         if (data[year][m]) {
           const pnl = parseFloat(data[year][m].sum.toFixed(2));
-          monthly[year][m] = pnl;
-          yearTotal += pnl;
+          monthly[year][m] = {
+            pnl,
+            wins:   data[year][m].wins,
+            losses: data[year][m].losses,
+            count:  data[year][m].count,
+          };
+          yearTotal  += pnl;
+          yearWins   += data[year][m].wins;
+          yearLosses += data[year][m].losses;
         }
       }
-      monthly[year]['year'] = parseFloat(yearTotal.toFixed(2));
+      monthly[year]['year'] = {
+        pnl:    parseFloat(yearTotal.toFixed(2)),
+        wins:   yearWins,
+        losses: yearLosses,
+        count:  yearWins + yearLosses,
+      };
     }
 
     // Average row: rata-rata P&L per bulan lintas semua tahun
@@ -106,13 +121,16 @@ router.get('/monthly', authenticateToken, (req, res) => {
     for (let m = 1; m <= 12; m++) {
       const values = years
         .filter(y => monthly[y][m] !== undefined)
-        .map(y => monthly[y][m]);
+        .map(y => monthly[y][m].pnl);
+
+      const totalWins   = years.filter(y => monthly[y][m]).reduce((s,y) => s + monthly[y][m].wins,   0);
+      const totalLosses = years.filter(y => monthly[y][m]).reduce((s,y) => s + monthly[y][m].losses, 0);
 
       if (values.length === 0) {
-        monthlyAvg[m] = null;
+        monthlyAvg[m]  = null;
         monthlyProb[m] = null;
       } else {
-        monthlyAvg[m] = parseFloat((values.reduce((a, b) => a + b, 0) / values.length).toFixed(2));
+        monthlyAvg[m]  = parseFloat((values.reduce((a, b) => a + b, 0) / values.length).toFixed(2));
         const positiveCount = values.filter(v => v > 0).length;
         monthlyProb[m] = Math.round((positiveCount / values.length) * 100);
       }
@@ -124,18 +142,38 @@ router.get('/monthly', authenticateToken, (req, res) => {
       ? parseFloat(avgValues.reduce((a, b) => a + b, 0).toFixed(2))
       : null;
 
-    // Probability year (rata-rata semua probability bulanan)
+    // Probability year
     const probValues = Object.values(monthlyProb).filter(v => v !== null);
     const probYearAvg = probValues.length > 0
       ? Math.round(probValues.reduce((a, b) => a + b, 0) / probValues.length)
       : null;
+
+    // Breakdown per timeframe
+    const byTimeframe = {};
+    const allSignals = db.prepare(`
+      SELECT timeframe, outcome, entry_price, tp1, sl, position_type
+      FROM signals
+      WHERE outcome IN ('WIN', 'LOSS') AND entry_price IS NOT NULL
+    `).all();
+    for (const sig of allSignals) {
+      const pnl = calcPnlPct(sig);
+      if (!byTimeframe[sig.timeframe]) byTimeframe[sig.timeframe] = { wins: 0, losses: 0, pnl: 0 };
+      if (sig.outcome === 'WIN')  byTimeframe[sig.timeframe].wins++;
+      if (sig.outcome === 'LOSS') byTimeframe[sig.timeframe].losses++;
+      byTimeframe[sig.timeframe].pnl += pnl || 0;
+    }
+    // round pnl
+    Object.values(byTimeframe).forEach(v => { v.pnl = parseFloat(v.pnl.toFixed(2)); });
 
     res.json({
       years,
       data:                monthly,
       monthly_avg:         { ...monthlyAvg, year: avgYearTotal },
       monthly_probability: { ...monthlyProb, year: probYearAvg },
+      by_timeframe:        byTimeframe,
       total_signals:       signals.length,
+      total_wins:          signals.filter(s => s.outcome === 'WIN').length,
+      total_losses:        signals.filter(s => s.outcome === 'LOSS').length,
       updated_at:          new Date().toISOString(),
     });
   } catch (err) {
