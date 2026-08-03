@@ -38,8 +38,8 @@ function SuccessRateBar({ rate }) {
     );
   }
 
-  const colorClass = rate >= 70 ? 'sr-bar--good' : rate >= 50 ? 'sr-bar--ok' : 'sr-bar--bad';
-  const valColorClass = rate >= 70 ? 'sr-val--good' : rate >= 50 ? 'sr-val--ok' : 'sr-val--bad';
+  const colorClass    = rate >= 70 ? 'sr-bar--good'  : rate >= 50 ? 'sr-bar--ok'  : 'sr-bar--bad';
+  const valColorClass = rate >= 70 ? 'sr-val--good'  : rate >= 50 ? 'sr-val--ok'  : 'sr-val--bad';
 
   return (
     <div className="sr-container">
@@ -56,6 +56,55 @@ function SuccessRateBar({ rate }) {
       <p className="sr-note">
         {rate >= 70 ? '✓ Akurasi histori tinggi' : rate >= 50 ? '~ Akurasi histori sedang' : '✗ Akurasi histori rendah'}
       </p>
+    </div>
+  );
+}
+
+/**
+ * Statistik WIN / LOSS keseluruhan
+ */
+function WinLossStats({ stats }) {
+  if (!stats) return null;
+
+  const { wins = 0, losses = 0, running = 0, this_month } = stats;
+  const completed = wins + losses;
+  if (completed === 0) return null;
+
+  // Gunakan data bulan ini jika tersedia dan lebih relevan
+  const showMonth = this_month && this_month.total > 0;
+
+  return (
+    <div className="wl-stats">
+      <div className="wl-stats-header">
+        <span className="wl-stats-title">Rekap Seluruh Sinyal</span>
+        {running > 0 && (
+          <span className="wl-running-badge">{running} running</span>
+        )}
+      </div>
+      <div className="wl-row">
+        <div className="wl-item wl-item--win">
+          <span className="wl-emoji">✅</span>
+          <span className="wl-count">{wins}</span>
+          <span className="wl-label">WIN</span>
+        </div>
+        <div className="wl-divider" />
+        <div className="wl-item wl-item--loss">
+          <span className="wl-emoji">❌</span>
+          <span className="wl-count">{losses}</span>
+          <span className="wl-label">LOSS</span>
+        </div>
+        <div className="wl-divider" />
+        <div className="wl-item wl-item--total">
+          <span className="wl-emoji">📊</span>
+          <span className="wl-count">{completed}</span>
+          <span className="wl-label">TOTAL</span>
+        </div>
+      </div>
+      {showMonth && (
+        <div className="wl-month">
+          Bulan ini: <span className="wl-month-win">{this_month.wins}W</span> / <span className="wl-month-loss">{this_month.losses}L</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -188,7 +237,7 @@ function CountdownTimer({ nextUpdateAt }) {
  * @param {object} liveState - state terkini semua timeframe dari Socket.IO
  * @param {object} latestByTimeframe - sinyal terakhir per timeframe dari API
  */
-export default function SignalPanel({ signal, liveState, nextUpdateAt, latestByTimeframe }) {
+export default function SignalPanel({ signal, liveState, nextUpdateAt, latestByTimeframe, statsData }) {
   // Tentukan timeframe yang aktif (gunakan 1H sebagai default)
   const activeTimeframe = signal?.timeframe || '1H';
 
@@ -245,7 +294,10 @@ export default function SignalPanel({ signal, liveState, nextUpdateAt, latestByT
         <CountdownTimer nextUpdateAt={nextUpdateAt} />
 
         {/* Win Rate / Success Rate */}
-        <SuccessRateBar rate={signal?.success_rate} />
+        <SuccessRateBar rate={signal?.success_rate ?? statsData?.win_rate} />
+
+        {/* WIN / LOSS Stats */}
+        <WinLossStats stats={statsData} />
 
         {/* Timeframe summary pills */}
         {liveState && (
@@ -348,7 +400,10 @@ export default function SignalPanel({ signal, liveState, nextUpdateAt, latestByT
       <CountdownTimer nextUpdateAt={nextUpdateAt} />
 
       {/* Success Rate / Win Rate */}
-      <SuccessRateBar rate={signal?.success_rate} />
+      <SuccessRateBar rate={signal?.success_rate ?? statsData?.win_rate} />
+
+      {/* WIN / LOSS Stats */}
+      <WinLossStats stats={statsData} />
 
       {/* Timeframe summary pills */}
       {liveState && (

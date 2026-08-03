@@ -576,3 +576,97 @@
   font-weight: 700;
 }
 
+
+/* -------------------------------------------------
+   WIN / LOSS Stats Block
+------------------------------------------------- */
+.wl-stats {
+  margin-top: var(--space-3);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.wl-stats-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.wl-stats-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.wl-running-badge {
+  font-size: 9px;
+  background: rgba(247, 147, 26, 0.15);
+  color: var(--color-btc);
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-weight: 600;
+  border: 1px solid rgba(247, 147, 26, 0.3);
+}
+
+.wl-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.wl-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.wl-emoji {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.wl-count {
+  font-size: 22px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  line-height: 1.1;
+}
+
+.wl-item--win  .wl-count { color: hsl(145, 60%, 55%); }
+.wl-item--loss .wl-count { color: hsl(354, 80%, 62%); }
+.wl-item--total .wl-count { color: var(--text-primary); }
+
+.wl-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.wl-divider {
+  width: 1px;
+  height: 36px;
+  background: var(--color-border);
+  margin: 0 var(--space-2);
+  flex-shrink: 0;
+}
+
+.wl-month {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.wl-month-win  { color: hsl(145, 60%, 55%); font-weight: 700; }
+.wl-month-loss { color: hsl(354, 80%, 62%); font-weight: 700; }

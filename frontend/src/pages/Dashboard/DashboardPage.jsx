@@ -10,12 +10,22 @@ import api from '../../lib/api';
 import './Dashboard.css';
 
 export default function DashboardPage() {
-  const [currentSignal, setCurrentSignal] = useState(null);
+  const [currentSignal, setCurrentSignal]   = useState(null);
   const [latestByTimeframe, setLatestByTimeframe] = useState({});
-  const [showSettings, setShowSettings] = useState(false);
-  const [multiView, setMultiView] = useState(false);
-  const [signalTrigger, setSignalTrigger] = useState(0);
+  const [signalStats, setSignalStats]       = useState(null);
+  const [showSettings, setShowSettings]     = useState(false);
+  const [multiView, setMultiView]           = useState(false);
+  const [signalTrigger, setSignalTrigger]   = useState(0);
   const { connected, latestSignal, liveState, nextUpdateAt, outcomeUpdate } = useSocket();
+
+  const fetchSignalStats = useCallback(async () => {
+    try {
+      const res = await api.get('/signals/stats');
+      setSignalStats(res.data);
+    } catch (err) {
+      console.error('Failed to fetch signal stats:', err);
+    }
+  }, []);
 
   const fetchLatestSignals = useCallback(async () => {
     try {
@@ -32,7 +42,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchLatestSignals();
-  }, [fetchLatestSignals]);
+    fetchSignalStats();
+  }, [fetchLatestSignals, fetchSignalStats]);
 
   // Update when new signal arrives via WebSocket
   useEffect(() => {
@@ -40,16 +51,34 @@ export default function DashboardPage() {
       setCurrentSignal(latestSignal);
       setSignalTrigger(prev => prev + 1);
       fetchLatestSignals();
+      fetchSignalStats();
     }
-  }, [latestSignal, fetchLatestSignals]);
+  }, [latestSignal, fetchLatestSignals, fetchSignalStats]);
 
   // Update currentSignal saat outcome (WIN/LOSS) diterima via socket
   useEffect(() => {
     if (outcomeUpdate?.signal) {
       setCurrentSignal(outcomeUpdate.signal);
       setSignalTrigger(prev => prev + 1); // refresh history table
+      // Refresh stats langsung tanpa perlu fetch ulang
+      if (outcomeUpdate.success_rate !== undefined) {
+        setSignalStats(prev => {
+          if (!prev) return prev;
+          const newWins   = outcomeUpdate.outcome === 'WIN'  ? (prev.wins   || 0) + 1 : (prev.wins   || 0);
+          const newLosses = outcomeUpdate.outcome === 'LOSS' ? (prev.losses || 0) + 1 : (prev.losses || 0);
+          const completed = newWins + newLosses;
+          return {
+            ...prev,
+            wins:     newWins,
+            losses:   newLosses,
+            win_rate: completed > 0 ? Math.round(newWins / completed * 100) : null,
+          };
+        });
+      } else {
+        fetchSignalStats();
+      }
     }
-  }, [outcomeUpdate]);
+  }, [outcomeUpdate, fetchSignalStats]);
 
   return (
     <div className="app-layout">
@@ -110,6 +139,7 @@ export default function DashboardPage() {
               liveState={liveState}
               nextUpdateAt={nextUpdateAt}
               latestByTimeframe={latestByTimeframe}
+              statsData={signalStats}
             />
             <IndicatorPanel signal={currentSignal} liveState={liveState} />
           </div>
