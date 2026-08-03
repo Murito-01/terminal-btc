@@ -1,21 +1,36 @@
 const { getDb } = require('../db/database');
 
 /**
- * Hitung success rate untuk tipe posisi dan timeframe tertentu
+ * Hitung success rate keseluruhan (lintas semua timeframe & posisi)
+ * agar mencerminkan performa strategi secara global.
  */
-function calculateSuccessRate(timeframe, positionType) {
+function calculateSuccessRate() {
   const db = getDb();
   const result = db.prepare(`
     SELECT 
       COUNT(*) as total,
       SUM(CASE WHEN outcome = 'WIN' THEN 1 ELSE 0 END) as wins
     FROM signals
-    WHERE timeframe = ? AND position_type = ? AND outcome IS NOT NULL
-  `).get(timeframe, positionType);
+    WHERE outcome IS NOT NULL
+  `).get();
   
   if (!result || result.total === 0) return null;
   
   return Math.round((result.wins / result.total) * 100);
+}
+
+/**
+ * Update kolom success_rate di SEMUA sinyal dengan nilai terkini.
+ * Dipanggil setelah backtest atau setelah outcome sinyal diperbarui.
+ */
+function refreshAllSuccessRates() {
+  const db = getDb();
+  const rate = calculateSuccessRate();
+  if (rate !== null) {
+    db.prepare('UPDATE signals SET success_rate = ?').run(rate);
+    console.log(`🔄 Success rate diperbarui: ${rate}% (semua sinyal)`);
+  }
+  return rate;
 }
 
 /**
@@ -25,7 +40,7 @@ function saveSignal(data) {
   const db = getDb();
   const { timeframe, position, ema9, ema13, stoch_k, stoch_d, order_block, entry_price, tp1, tp2, sl } = data;
 
-  const successRate = calculateSuccessRate(timeframe, position);
+  const successRate = calculateSuccessRate(); // global win rate
 
   const stmt = db.prepare(`
     INSERT INTO signals (timeframe, position_type, success_rate, ema9, ema13, stoch_k, stoch_d, order_block_zone, entry_price, tp1, tp2, sl)
@@ -112,14 +127,8 @@ async function checkOpenSignalOutcomes(io = null) {
         db.prepare('UPDATE signals SET outcome = ? WHERE id = ?').run(outcome, sig.id);
         console.log(`📊 Outcome: Sinyal #${sig.id} [${sig.timeframe}] ${sig.position_type} → ${outcome}`);
 
-        // Update success_rate semua sinyal dengan timeframe+position_type yang sama
-        const rate = calculateSuccessRate(sig.timeframe, sig.position_type);
-        if (rate !== null) {
-          db.prepare(`
-            UPDATE signals SET success_rate = ?
-            WHERE timeframe = ? AND position_type = ?
-          `).run(rate, sig.timeframe, sig.position_type);
-        }
+        // Refresh success_rate global untuk semua sinyal
+        refreshAllSuccessRates();
 
         // Emit ke frontend
         const updatedSignal = db.prepare('SELECT * FROM signals WHERE id = ?').get(sig.id);
@@ -127,7 +136,7 @@ async function checkOpenSignalOutcomes(io = null) {
           io.emit('signal_outcome', {
             signal:       updatedSignal,
             outcome,
-            success_rate: rate,
+            success_rate: calculateSuccessRate(),
           });
         }
       }
@@ -198,6 +207,7 @@ module.exports = {
   getLatestSignal,
   logWebhook,
   calculateSuccessRate,
+  refreshAllSuccessRates,
   checkOpenSignalOutcomes,
 };
 

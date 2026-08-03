@@ -18,6 +18,7 @@ const https      = require('https');
 const { authenticateToken }                                       = require('../middleware/auth');
 const { getDb }                                                   = require('../db/database');
 const { calcEMA, calcStochastic, calcATR, detectOrderBlock, calcTPSL } = require('../services/indicatorService');
+const { refreshAllSuccessRates }                                  = require('../services/signalService');
 
 const router = express.Router();
 
@@ -310,11 +311,15 @@ router.post('/run', authenticateToken, async (req, res) => {
       ? Math.round((wins / completed.length) * 100)
       : 0;
 
+    // Update success_rate semua sinyal di DB dengan nilai global terbaru
+    const globalRate = refreshAllSuccessRates();
+
     res.json({
       success:   true,
       message:   `Backtest selesai! ${summary.inserted} sinyal dari ${startDate} s/d ${endDate} berhasil dimasukkan.`,
       startDate, endDate,
       winRate,
+      globalSuccessRate: globalRate,
       summary,
     });
 
