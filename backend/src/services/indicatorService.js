@@ -105,9 +105,12 @@ function calcATR(candles, period = 14) {
 function calcTPSL(position, entryPrice, atr) {
   if (!atr || !entryPrice) return { tp1: null, tp2: null, sl: null };
 
+  // SL  = 1.5 × ATR  → Risk   = 1.5 ATR
+  // TP1 = 3.0 × ATR  → Reward = 3.0 ATR → R:R = 1:2  ✅
+  // TP2 = 4.5 × ATR  → Reward = 4.5 ATR → R:R = 1:3  ✅
   const slDist  = atr * 1.5;
-  const tp1Dist = atr * 2;
-  const tp2Dist = atr * 3;
+  const tp1Dist = atr * 3.0;   // R:R 1:2
+  const tp2Dist = atr * 4.5;   // R:R 1:3
 
   if (position === 'LONG') {
     return {
